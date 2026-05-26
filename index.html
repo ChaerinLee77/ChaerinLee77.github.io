@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shakespeare Emotional Flow and Character Network Classification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink:       #1a1410;
+      --parchment: #faf6ef;
+      --cream:     #f3ede2;
+      --gold:      #8b6914;
+      --gold-light:#c4982a;
+      --rust:      #7a3b1e;
+      --sage:      #4a6741;
+      --slate:     #3d4f5c;
+      --muted:     #6b5e52;
+      --rule:      #c9bfae;
+      --shadow:    rgba(26,20,16,.08);
+
+      /* Type accent colours per section */
+      --c1: #4a6741;   /* Dream – green */
+      --c2: #7a3b1e;   /* Romeo – rust */
+      --c3: #2e3d5c;   /* Macbeth – dark blue */
+      --c4: #5a3e6b;   /* Measure – purple */
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 17px;
+      line-height: 1.75;
+      color: var(--ink);
+      background: var(--parchment);
+    }
+
+    /* ── NAVIGATION ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--ink);
+      color: #e8dfd0;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0 2rem;
+      font-family: 'Source Serif 4', serif;
+      font-size: 0.78rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    nav a {
+      color: #c9bfae;
+      text-decoration: none;
+      padding: .75rem 1rem;
+      transition: color .2s;
+      flex-shrink: 0;
+    }
+    nav a:hover { color: #f0e6d0; }
+    nav .nav-brand {
+      color: var(--gold-light);
+      font-family: 'Playfair Display', serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-right: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    /* ── HERO ── */
+    header {
+      background: var(--ink);
+      color: var(--parchment);
+      padding: 5rem 2rem 4rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 39px,
+          rgba(201,191,174,.08) 39px,
+          rgba(201,191,174,.08) 40px
+        );
+    }
+    .hero-kicker {
+      font-size: .8rem;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--gold-light);
+      margin-bottom: 1rem;
+      position: relative;
+    }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 5vw, 3.2rem);
+      font-weight: 700;
+      line-height: 1.2;
+      max-width: 800px;
+      margin: 0 auto 1.2rem;
+      position: relative;
+    }
+    .hero-subtitle {
+      font-style: italic;
+      font-size: 1.05rem;
+      color: #c9bfae;
+      max-width: 600px;
+      margin: 0 auto 2rem;
+      position: relative;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .hero-meta span {
+      font-size: .82rem;
+      letter-spacing: .04em;
+      color: #a8987e;
+    }
+    .hero-meta strong { color: #e8dfd0; }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: 4rem 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    section:last-of-type { border-bottom: none; }
+
+    .section-label {
+      font-size: .72rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .6rem;
+    }
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.5rem, 3.5vw, 2rem);
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 1.4rem;
+      color: var(--ink);
+    }
+    h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 2rem 0 .7rem;
+      color: var(--ink);
+    }
+    h4 {
+      font-size: .85rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-family: 'Source Serif 4', serif;
+      font-weight: 600;
+      margin: 1.6rem 0 .5rem;
+      color: var(--muted);
+    }
+    p { margin-bottom: 1rem; }
+    p:last-child { margin-bottom: 0; }
+
+    ul, ol {
+      padding-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    li { margin-bottom: .35rem; }
+
+    strong { font-weight: 600; }
+
+    /* ── DECORATIVE RULE ── */
+    .ornament {
+      text-align: center;
+      color: var(--gold);
+      font-size: 1.1rem;
+      letter-spacing: .5em;
+      margin: 2rem 0;
+      opacity: .6;
+    }
+
+    /* ── TYPE PROFILE CARDS ── */
+    .type-card {
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      margin: 3.5rem 0;
+      overflow: hidden;
+      box-shadow: 0 2px 12px var(--shadow);
+    }
+    .type-card-header {
+      padding: 1.6rem 2rem;
+      color: #fff;
+    }
+    .type-card-header .type-number {
+      font-size: .7rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      opacity: .75;
+      margin-bottom: .4rem;
+    }
+    .type-card-header h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 0 .3rem;
+    }
+    .type-card-header .keyword-label {
+      font-style: italic;
+      font-size: .95rem;
+      opacity: .85;
+    }
+    .type-card[data-type="1"] .type-card-header { background: var(--c1); }
+    .type-card[data-type="2"] .type-card-header { background: var(--c2); }
+    .type-card[data-type="3"] .type-card-header { background: var(--c3); }
+    .type-card[data-type="4"] .type-card-header { background: var(--c4); }
+
+    .type-card-body { padding: 2rem; background: #fff; }
+
+    /* subsection label inside card */
+    .card-subsection {
+      font-size: .7rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin: 1.8rem 0 .6rem;
+      padding-bottom: .4rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .type-card[data-type="1"] .card-subsection { color: var(--c1); border-color: var(--c1); }
+    .type-card[data-type="2"] .card-subsection { color: var(--c2); border-color: var(--c2); }
+    .type-card[data-type="3"] .card-subsection { color: var(--c3); border-color: var(--c3); }
+    .type-card[data-type="4"] .card-subsection { color: var(--c4); border-color: var(--c4); }
+
+    /* works list pill */
+    .works-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      margin: .8rem 0;
+      padding: 0;
+      list-style: none;
+    }
+    .works-list li {
+      padding: .3rem .85rem;
+      border-radius: 20px;
+      font-size: .82rem;
+      font-style: italic;
+      border: 1px solid currentColor;
+      margin: 0;
+    }
+    .type-card[data-type="1"] .works-list li { color: var(--c1); }
+    .type-card[data-type="2"] .works-list li { color: var(--c2); }
+    .type-card[data-type="3"] .works-list li { color: var(--c3); }
+    .type-card[data-type="4"] .works-list li { color: var(--c4); }
+
+    /* ── IMAGES ── */
+    .img-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin: 1.4rem 0;
+    }
+    .img-gallery.single { grid-template-columns: 1fr; max-width: 520px; }
+    .img-figure {
+      border: 1px solid var(--rule);
+      background: var(--cream);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .img-figure img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: contain;
+      background: #fff;
+    }
+    .img-figure figcaption {
+      padding: .45rem .7rem;
+      font-size: .75rem;
+      color: var(--muted);
+      font-style: italic;
+      text-align: center;
+      background: var(--cream);
+    }
+
+    /* ── HIGHLIGHT BOXES ── */
+    .highlight-box {
+      background: var(--cream);
+      border-left: 3px solid var(--gold);
+      padding: 1.2rem 1.4rem;
+      margin: 1.5rem 0;
+      border-radius: 0 2px 2px 0;
+    }
+    .highlight-box p { margin-bottom: 0; }
+
+    /* ── REFERENCES ── */
+    .references-list {
+      list-style: none;
+      padding: 0;
+    }
+    .references-list li {
+      padding: .75rem 0;
+      border-bottom: 1px solid var(--rule);
+      font-size: .88rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .references-list li:last-child { border-bottom: none; }
+    .references-list a { color: var(--gold); text-decoration: none; }
+    .references-list a:hover { text-decoration: underline; }
+
+    /* ── FOUR-TYPE OVERVIEW ── */
+    .types-overview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .type-chip {
+      padding: 1.1rem 1rem;
+      border-radius: 2px;
+      color: #fff;
+      font-family: 'Playfair Display', serif;
+      font-size: .9rem;
+      font-weight: 600;
+      line-height: 1.35;
+      text-align: center;
+    }
+    .type-chip small {
+      display: block;
+      font-family: 'Source Serif 4', serif;
+      font-size: .72rem;
+      font-style: italic;
+      font-weight: 400;
+      opacity: .82;
+      margin-top: .3rem;
+    }
+    .type-chip:nth-child(1) { background: var(--c1); }
+    .type-chip:nth-child(2) { background: var(--c2); }
+    .type-chip:nth-child(3) { background: var(--c3); }
+    .type-chip:nth-child(4) { background: var(--c4); }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--ink);
+      color: #a8987e;
+      text-align: center;
+      padding: 2.5rem 2rem;
+      font-size: .82rem;
+      letter-spacing: .04em;
+    }
+    footer strong { color: #e8dfd0; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .type-card-body { padding: 1.2rem; }
+      nav { padding: 0 1rem; }
+      section { padding: 2.5rem 0; }
+      header { padding: 3.5rem 1.2rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-brand">PBL Module 2</span>
+  <a href="#introduction">Introduction</a>
+  <a href="#methodology">Methodology</a>
+  <a href="#types">The Types</a>
+  <a href="#reflection">Reflection</a>
+  <a href="#references">References</a>
+</nav>
+
+<!-- HERO -->
+<header>
+  <p class="hero-kicker">PBL Module 2 Report &nbsp;·&nbsp; Shakespeare Classification Project</p>
+  <h1>Shakespeare Emotional Flow and Character Network Classification</h1>
+  <p class="hero-subtitle">Lear, Lover, or Lunatic: Mapping Shakespeare for the Streaming Library</p>
+  <div class="hero-meta">
+    <span><strong>Team</strong> 김세형 &nbsp;·&nbsp; 이승빈 &nbsp;·&nbsp; 이채린 &nbsp;·&nbsp; 오신영</span>
+  </div>
+</header>
+
+<!-- ── INTRODUCTION ── -->
+<section id="introduction">
+  <div class="container">
+    <p class="section-label">Section 1</p>
+    <h2>Introduction</h2>
+
+    <p>This project explores a new way of classifying Shakespeare's plays for a global streaming library. Instead of organizing the plays only by traditional genre labels such as comedy, tragedy, history, or romance, our goal is to classify them through the <strong>emotional experience</strong> they create and the <strong>character relationships</strong> that structure their stories.</p>
+
+    <p>The main idea behind this project is that viewers do not connect with stories only because of genre. They also respond to the emotional movement of a story — such as whether it feels hopeful, unstable, dark, tense, or restorative — and to the way characters are connected. For this reason, we focused on two main dimensions: <strong>emotional flow</strong> and <strong>character relationship networks</strong>.</p>
+
+    <p>To make the classification more data-driven, we used digital analysis tools rather than relying only on personal impressions. Voyant Tools helped us examine word patterns and emotional keywords. DraCor and Gephi helped us analyze and visualize character networks. We also used the Shakespeare Character Networks Explorer to compare network metrics such as nodes, edges, density, communities, and modularity.</p>
+
+    <div class="highlight-box">
+      <p>Through this process, we grouped the selected Shakespeare plays into four main types, each named after a representative work that clearly shows the emotional and relational pattern of that group.</p>
+    </div>
+
+    <div class="types-overview">
+      <div class="type-chip">A Midsummer Night's Dream-type<small>Magical Confusion + Restored Harmony</small></div>
+      <div class="type-chip">Romeo and Juliet-type<small>Passionate Love + Emotional Collapse</small></div>
+      <div class="type-chip">Macbeth-type<small>Dark Ambition + Conflict Spiral</small></div>
+      <div class="type-chip">Measure for Measure-type<small>Power System + Social Tension</small></div>
+    </div>
+
+    <p>These types are intended to work like streaming categories, where viewers can discover stories based on emotional rhythm and relationship structure rather than genre alone. In this sense, Shakespeare's plays become reference points for a wider classification system that could later be applied to films and series in a streaming library.</p>
+  </div>
+</section>
+
+<!-- ── METHODOLOGY ── -->
+<section id="methodology">
+  <div class="container">
+    <p class="section-label">Section 2</p>
+    <h2>Methodology</h2>
+
+    <p>To build our classification system, we analyzed Shakespeare's plays through two main dimensions: emotional flow and character relationship structure. Our goal was to make the classification process as transparent and repeatable as possible.</p>
+
+    <h3>Emotional Flow — Voyant Tools</h3>
+    <p>We turned emotional flow into something measurable by using Voyant Tools, examining word patterns, frequent terms, vocabulary density, readability, and average sentence length. We focused especially on repeated positive and negative keywords.</p>
+
+    <div class="highlight-box">
+      <p><strong>Positive words</strong> included terms related to love, trust, harmony, friendship, mercy, marriage, peace, and recovery — such as "love," "good," "fair," "sweet," "peace," "faith," "mercy," "friend," and "marry."</p>
+      <p style="margin-top:.6rem"><strong>Negative words</strong> included terms related to death, fear, violence, revenge, guilt, shame, betrayal, and legal conflict — such as "death," "fear," "murder," "blood," "revenge," "shame," "hell," "hate," "mad," "poison," "bond," and "penalty."</p>
+    </div>
+
+    <p>We did not treat emotional flow as a single fixed mood. Instead, we looked at the <em>balance</em> between positive and negative words and considered how those words matched the overall movement of the plot.</p>
+
+    <h3>Character Relationship Networks — DraCor &amp; Gephi</h3>
+    <p>We turned character relationships into measurable data by using DraCor, Gephi, and the Shakespeare Character Networks Explorer. In each play's network, characters function as nodes and their interactions as connections. We focused on several network features:</p>
+    <ul>
+      <li>Number of characters (nodes) and connections (edges)</li>
+      <li>Density — how tightly connected characters are</li>
+      <li>Communities and Q modularity — whether characters cluster into separate groups</li>
+      <li>Maximum degree — identifying central or bridge characters</li>
+      <li>Average path length and clustering coefficient</li>
+    </ul>
+
+    <p>For the Shakespeare Character Networks Explorer, we used a consistent setting across plays: <em>Stage</em> as the edge type, <em>Full Play</em> network, node size set to Weighted Degree, and node color set to Community.</p>
+
+    <h3>Limitations</h3>
+    <p>Keyword frequency cannot capture every emotional nuance of a play. The same word can have different meanings depending on speaker, context, irony, or dramatic situation. Similarly, a full-play network shows the overall relationship structure but does not fully capture how relationships change scene by scene. For this reason, we treated the data as <em>supporting evidence</em> rather than absolute proof, combining Voyant keyword analysis, DraCor network data, Gephi visualization, and literary interpretation.</p>
+  </div>
+</section>
+
+<!-- ── THE TYPES ── -->
+<section id="types">
+  <div class="container">
+    <p class="section-label">Section 3</p>
+    <h2>The Types</h2>
+    <p>Our analysis produced four main types based on emotional flow and character relationship networks. These types do not simply follow traditional genre labels; each represents a different combination of emotional pattern and network structure.</p>
+
+    <!-- TYPE 1 -->
+    <div class="type-card" data-type="1">
+      <div class="type-card-header">
+        <div class="type-number">Type Profile 1</div>
+        <h3>A Midsummer Night's Dream-type</h3>
+        <div class="keyword-label">Magical Confusion + Restored Harmony</div>
+      </div>
+      <div class="type-card-body">
+
+        <div class="card-subsection">Emotional Flow</div>
+        <p>This type is defined by a movement from confusion, separation, or temporary emotional disorder toward harmony, recovery, and social restoration. The plays in this group often begin with conflict, exile, romantic confusion, or social disorder, but their emotional flow gradually moves toward reconciliation, marriage, forgiveness, or social healing.</p>
+        <p><em>A Midsummer Night's Dream</em> was chosen as the representative work because it clearly shows this pattern. Negative words such as "death," "fear," "hate," "mad," and "wrong" appear during the scenes of magical confusion, but dominant emotional vocabulary remains positive: "love," "fair," "good," "sweet," "true," "happy," "joy," "gentle," "merry," and "delight."</p>
+        <p>The other works follow the same broad emotional movement. <em>As You Like It</em> begins with exile and conflict but moves toward healing and marriage. <em>The Tempest</em> and <em>The Winter's Tale</em> move from loss toward forgiveness and reunion. <em>The Taming of the Shrew</em> is based on relationship adjustment and social reordering.</p>
+
+        <div class="img-gallery">
+          <figure class="img-figure">
+            <img src="emotional_flow_midsummer.png" alt="Emotional flow — A Midsummer Night's Dream" loading="lazy" />
+            <figcaption>A Midsummer Night's Dream — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_as_you_like_it.png" alt="Emotional flow — As You Like It" loading="lazy" />
+            <figcaption>As You Like It — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_tempest.png" alt="Emotional flow — The Tempest" loading="lazy" />
+            <figcaption>The Tempest — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_winters_tale.png" alt="Emotional flow — The Winter's Tale" loading="lazy" />
+            <figcaption>The Winter's Tale — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_taming_of_the_shrew.jpg" alt="Emotional flow — The Taming of the Shrew" loading="lazy" />
+            <figcaption>The Taming of the Shrew — emotional flow</figcaption>
+          </figure>
+        </div>
+
+        <div class="card-subsection">Character Network</div>
+        <p>The character network in this type is usually dense, active, and socially interconnected. <em>A Midsummer Night's Dream</em> has 17 nodes, 131 edges, a density of 0.963, 3 communities, and a Q modularity score of 0.058 — meaning almost all characters are strongly interconnected and the groups are highly tangled. <em>As You Like It</em> shows a slightly different version: 19 nodes, 100 edges, density 0.585, 4 communities — more loosely tangled but still moving toward relational repair through the Forest of Arden.</p>
+        <p>Across the type, the network may begin in disorder, but the overall movement is toward restored connection rather than permanent collapse.</p>
+
+        <div class="img-gallery">
+          <figure class="img-figure">
+            <img src="character_network_midsummer.jpg" alt="Character network — A Midsummer Night's Dream" loading="lazy" />
+            <figcaption>A Midsummer Night's Dream — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_as_you_like_it.jpg" alt="Character network — As You Like It" loading="lazy" />
+            <figcaption>As You Like It — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_tempest.png" alt="Character network — The Tempest" loading="lazy" />
+            <figcaption>The Tempest — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_winters_tale.png" alt="Character network — The Winter's Tale" loading="lazy" />
+            <figcaption>The Winter's Tale — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_taming_of_the_shrew.png" alt="Character network — The Taming of the Shrew" loading="lazy" />
+            <figcaption>The Taming of the Shrew — character network</figcaption>
+          </figure>
+        </div>
+
+        <div class="card-subsection">Other Distinguishing Features</div>
+        <p>What connects these works is the pattern of <strong>confusion → adjustment → recovery</strong>. Each play uses a different source of disorder — magic, exile, isolation, loss, or social adjustment — but all move through conflict and come out with a more stable social or emotional order.</p>
+        <p>This type is different from the Romeo and Juliet-type because emotional instability does not lead to collapse, and different from the Macbeth-type because conflict does not spiral into deeper violence or moral decay.</p>
+
+        <div class="card-subsection">Works in This Type</div>
+        <ul class="works-list">
+          <li>A Midsummer Night's Dream</li>
+          <li>As You Like It</li>
+          <li>The Tempest</li>
+          <li>The Winter's Tale</li>
+          <li>The Taming of the Shrew</li>
+        </ul>
+        <p><strong>Target Viewers:</strong> Viewers who enjoy hopeful stories, romance, fantasy, emotional recovery, and relationship repair — stories that begin with confusion but end with warmth and harmony.</p>
+      </div>
+    </div>
+
+    <!-- TYPE 2 -->
+    <div class="type-card" data-type="2">
+      <div class="type-card-header">
+        <div class="type-number">Type Profile 2</div>
+        <h3>Romeo and Juliet-type</h3>
+        <div class="keyword-label">Passionate Love + Emotional Collapse</div>
+      </div>
+      <div class="type-card-body">
+
+        <div class="card-subsection">Emotional Flow</div>
+        <p>This type is defined by intense emotion, emotional instability, and sudden movement toward crisis or collapse. The plays often begin with love, desire, loyalty, trust, or strong personal feeling, but these emotions become unstable because of family conflict, jealousy, misunderstanding, betrayal, political pressure, or psychological manipulation.</p>
+        <p><em>Romeo and Juliet</em> clearly shows how passionate love can become tragic inside a hostile social environment. <em>Othello</em> fits through jealousy and manipulation — Iago turns trust into suspicion, jealousy, and violence. <em>Hamlet</em> shows an unstable, psychologically intense pattern where positive values are constantly disrupted by revenge, grief, and moral doubt. <em>Antony and Cleopatra</em> adds a political version of emotional volatility where love and empire collide. <em>Much Ado About Nothing</em> is a lighter case but still moves from romance into emotional crisis through slander and false accusation.</p>
+        <p>The key pattern is not just sadness, but the movement from intense positive emotion to crisis.</p>
+
+        <div class="img-gallery">
+          <figure class="img-figure">
+            <img src="emotional_flow_romeo_juliet.png" alt="Emotional flow — Romeo and Juliet" loading="lazy" />
+            <figcaption>Romeo and Juliet — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_othello.png" alt="Emotional flow — Othello" loading="lazy" />
+            <figcaption>Othello — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_hamlet.png" alt="Emotional flow — Hamlet" loading="lazy" />
+            <figcaption>Hamlet — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_antony_and_cleopatra.png" alt="Emotional flow — Antony and Cleopatra" loading="lazy" />
+            <figcaption>Antony and Cleopatra — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_much_ado.png" alt="Emotional flow — Much Ado About Nothing" loading="lazy" />
+            <figcaption>Much Ado About Nothing — emotional flow</figcaption>
+          </figure>
+        </div>
+
+        <div class="card-subsection">Character Network</div>
+        <p>The character network in this type is often built around fragile bonds, bridge characters, and divided groups. Miscommunication, secrecy, rumor, or manipulation can quickly damage the whole relationship system.</p>
+        <p>In <em>Romeo and Juliet</em> (38 nodes, density 0.35), Romeo functions as an emotional bridge between personal love and family conflict. In <em>Othello</em> (28 nodes, density 0.43), Iago occupies the central position and can control and distort the flow of trust — the network becomes a machine for spreading suspicion. In <em>Hamlet</em> (38 nodes, density 0.31), Horatio holds the maximum degree while Hamlet remains psychologically isolated. <em>Antony and Cleopatra</em> has 74 nodes but low density (0.15), reflecting a large but loosely connected political and emotional world. <em>Much Ado</em> (19 nodes, density 0.731) shows how a dense social network can turn romantic relationships into emotional crisis.</p>
+
+        <div class="img-gallery">
+          <figure class="img-figure">
+            <img src="character_network_romeo_juliet.png" alt="Character network — Romeo and Juliet" loading="lazy" />
+            <figcaption>Romeo and Juliet — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_othello.png" alt="Character network — Othello" loading="lazy" />
+            <figcaption>Othello — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_hamlet.png" alt="Character network — Hamlet" loading="lazy" />
+            <figcaption>Hamlet — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_antony_cleopatra.jpg" alt="Character network — Antony and Cleopatra" loading="lazy" />
+            <figcaption>Antony and Cleopatra — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_much_ado.jpg" alt="Character network — Much Ado About Nothing" loading="lazy" />
+            <figcaption>Much Ado About Nothing — character network</figcaption>
+          </figure>
+        </div>
+
+        <div class="card-subsection">Other Distinguishing Features</div>
+        <p>What connects these works is that strong emotion becomes unstable under pressure. The Romeo and Juliet-type differs from the Macbeth-type in that collapse often begins from fragile love, trust, or emotional bonds rather than ambition, revenge, or moral corruption. In this type, emotional intensity itself becomes dangerous.</p>
+
+        <div class="card-subsection">Works in This Type</div>
+        <ul class="works-list">
+          <li>Romeo and Juliet</li>
+          <li>Othello</li>
+          <li>Hamlet</li>
+          <li>Antony and Cleopatra</li>
+          <li>Much Ado About Nothing</li>
+        </ul>
+        <p><strong>Target Viewers:</strong> Viewers who enjoy emotionally intense stories, tragic romance, psychological tension, and dramatic turning points.</p>
+      </div>
+    </div>
+
+    <!-- TYPE 3 -->
+    <div class="type-card" data-type="3">
+      <div class="type-card-header">
+        <div class="type-number">Type Profile 3</div>
+        <h3>Macbeth-type</h3>
+        <div class="keyword-label">Dark Ambition + Conflict Spiral</div>
+      </div>
+      <div class="type-card-body">
+
+        <div class="card-subsection">Emotional Flow</div>
+        <p>This type is defined by a dark and increasingly negative emotional direction. The plays do not simply include sad or tragic moments; their emotional flow tends to move deeper into fear, violence, revenge, guilt, betrayal, social collapse, legal conflict, or moral corruption. Unlike the recovery-centered type, the Macbeth-type does not move clearly toward healing or reconciliation.</p>
+        <p><em>Macbeth</em> clearly shows this downward emotional spiral. The play begins with vocabulary connected to honor, loyalty, and social order — "good," "noble," "hail," "grace," "worthy," "peace" — but these are gradually overwhelmed by darker vocabulary: "fear," "murderer," "death," "hell," "devil," "bloody," "terrible," "murder," and "unnatural." Its Vocabulary Density of 0.186 is the highest among the selected tragedy-related works, suggesting a wide and intense range of language to express guilt, fear, hallucination, and moral decay.</p>
+        <p><em>Titus Andronicus</em> represents the most extreme revenge-driven version. <em>King Lear</em> develops the pattern through family breakdown and social collapse. <em>Timon of Athens</em> shows a stable negative emotional pattern through social betrayal and misanthropy. <em>The Merchant of Venice</em> is a borderline case, but its conflict vocabulary — "bond," "flesh," "fear," "blood," "devil," "death," "forfeit," "hate," "revenge," "penalty" — supports its placement here despite its traditional comedy label.</p>
+
+        <div class="img-gallery">
+          <figure class="img-figure">
+            <img src="emotional_flow_macbeth.png" alt="Emotional flow — Macbeth" loading="lazy" />
+            <figcaption>Macbeth — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_titus_andronicus.png" alt="Emotional flow — Titus Andronicus" loading="lazy" />
+            <figcaption>Titus Andronicus — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_king_lear.png" alt="Emotional flow — King Lear" loading="lazy" />
+            <figcaption>King Lear — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_timon_of_athens.png" alt="Emotional flow — Timon of Athens" loading="lazy" />
+            <figcaption>Timon of Athens — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_merchant_venice.png" alt="Emotional flow — The Merchant of Venice" loading="lazy" />
+            <figcaption>The Merchant of Venice — emotional flow</figcaption>
+          </figure>
+        </div>
+
+        <div class="card-subsection">Character Network</div>
+        <p>The character network in the Macbeth-type is usually conflict-centered, unstable, or morally unsafe. Relationships are shaped by ambition, fear, revenge, family breakdown, social exclusion, legal conflict, or betrayal.</p>
+        <p><em>Macbeth</em> has network size 45, low density 0.18, average path length 2.03, and Macbeth as central figure — the network is fragmented and unstable, organized around his ambition and its consequences. <em>Titus Andronicus</em> (27 nodes, density 0.52) creates a closed space where revenge and violence spread rapidly. <em>King Lear</em> (33 nodes, density 0.38) reflects the divided structure of loyalty and betrayal through its split centrality. <em>Timon of Athens</em> (68 nodes, density 0.18, clustering 0.88) shows a tightly connected but hypocritical social circle that collapses. <em>The Merchant of Venice</em> (18 nodes, density 0.503) is organized around money, contract, law, and revenge.</p>
+
+        <div class="img-gallery">
+          <figure class="img-figure">
+            <img src="character_network_macbeth.png" alt="Character network — Macbeth" loading="lazy" />
+            <figcaption>Macbeth — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_titus_andronicus.jpg" alt="Character network — Titus Andronicus" loading="lazy" />
+            <figcaption>Titus Andronicus — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_king_lear.png" alt="Character network — King Lear" loading="lazy" />
+            <figcaption>King Lear — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_timon_athens.jpg" alt="Character network — Timon of Athens" loading="lazy" />
+            <figcaption>Timon of Athens — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_merchant_venice.jpg" alt="Character network — The Merchant of Venice" loading="lazy" />
+            <figcaption>The Merchant of Venice — character network</figcaption>
+          </figure>
+        </div>
+
+        <div class="card-subsection">Other Distinguishing Features</div>
+        <p>The word "spiral" is key: emotional and relational patterns do not move in a straight line toward healing, but circle back through repeated violence, revenge, guilt, betrayal, punishment, or social rejection. Each work shows a different version — ambition and paranoia in <em>Macbeth</em>, revenge cycles in <em>Titus Andronicus</em>, family and political collapse in <em>King Lear</em>, social betrayal in <em>Timon of Athens</em>, and legal-financial conflict in <em>The Merchant of Venice</em>.</p>
+
+        <div class="card-subsection">Works in This Type</div>
+        <ul class="works-list">
+          <li>Macbeth</li>
+          <li>Titus Andronicus</li>
+          <li>King Lear</li>
+          <li>Timon of Athens</li>
+          <li>The Merchant of Venice</li>
+        </ul>
+        <p><strong>Target Viewers:</strong> Viewers who enjoy dark stories, moral conflict, revenge narratives, tragic downfall, psychological pressure, or social criticism.</p>
+      </div>
+    </div>
+
+    <!-- TYPE 4 -->
+    <div class="type-card" data-type="4">
+      <div class="type-card-header">
+        <div class="type-number">Type Profile 4</div>
+        <h3>Measure for Measure-type</h3>
+        <div class="keyword-label">Power System + Social Tension</div>
+      </div>
+      <div class="type-card-body">
+
+        <div class="card-subsection">Emotional Flow</div>
+        <p>This type is defined by social, political, or institutional tension rather than simple emotional recovery or personal collapse. The emotional flow often remains tense because the main conflict is connected to law, power, authority, public identity, social roles, political alliances, or institutional pressure. Even when the plot reaches a resolution, the ending does not feel completely simple or emotionally comfortable.</p>
+        <p><em>Julius Caesar</em> fits because its emotional world is shaped by political rhetoric, public loyalty, and betrayal — its low vocabulary density of 0.141 suggests repeated political discourse around a small set of key figures. <em>Coriolanus</em> is driven by political argument, military rhetoric, and social debate (average sentence length of 16.8 words). <em>Twelfth Night</em> and <em>The Comedy of Errors</em> represent the social-comedy side, where disguise, mistaken identity, and social role confusion create the main emotional movement.</p>
+
+        <div class="img-gallery">
+          <figure class="img-figure">
+            <img src="emotional_flow_measure_for_measure.png" alt="Emotional flow — Measure for Measure" loading="lazy" />
+            <figcaption>Measure for Measure — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_julius_caesar.png" alt="Emotional flow — Julius Caesar" loading="lazy" />
+            <figcaption>Julius Caesar — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_coriolanus.png" alt="Emotional flow — Coriolanus" loading="lazy" />
+            <figcaption>Coriolanus — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_twelfth_night.png" alt="Emotional flow — Twelfth Night" loading="lazy" />
+            <figcaption>Twelfth Night — emotional flow</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="emotional_flow_comedy_of_errors.png" alt="Emotional flow — The Comedy of Errors" loading="lazy" />
+            <figcaption>The Comedy of Errors — emotional flow</figcaption>
+          </figure>
+        </div>
+
+        <div class="card-subsection">Character Network</div>
+        <p>The character network in this type is often organized around institutions, authority, social hierarchy, political alliances, or identity confusion, rather than only personal bonds.</p>
+        <p><em>Julius Caesar</em> (51 nodes, density 0.24, Brutus as central figure with max degree 43) is structured around Brutus's political choice between Caesar, Cassius, Antony, and the Roman public. <em>Coriolanus</em> (67 nodes, density 0.16, Coriolanus max degree 54) concentrates conflict around the hero as central point between citizens, nobles, military power, and social judgment. <em>Twelfth Night</em> (13 nodes, density 0.821, Q modularity 0.047) is small but tightly connected — the characters are not clearly separated into isolated groups. <em>The Comedy of Errors</em> shows how one identity error can disturb an entire social network.</p>
+
+        <div class="img-gallery">
+          <figure class="img-figure">
+            <img src="character_network_measure_for_measure.png" alt="Character network — Measure for Measure" loading="lazy" />
+            <figcaption>Measure for Measure — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_julius_caesar.jpg" alt="Character network — Julius Caesar" loading="lazy" />
+            <figcaption>Julius Caesar — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_coriolanus.jpg" alt="Character network — Coriolanus" loading="lazy" />
+            <figcaption>Coriolanus — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_twelfth_night.jpg" alt="Character network — Twelfth Night" loading="lazy" />
+            <figcaption>Twelfth Night — character network</figcaption>
+          </figure>
+          <figure class="img-figure">
+            <img src="character_network_comedy_of_errors.png" alt="Character network — The Comedy of Errors" loading="lazy" />
+            <figcaption>The Comedy of Errors — character network</figcaption>
+          </figure>
+        </div>
+
+        <div class="card-subsection">Other Distinguishing Features</div>
+        <p>What connects these works is that private feeling alone does not explain the conflict. The characters are shaped by larger structures: law, rank, citizenship, public reputation, gender performance, political loyalty, or mistaken social identity. This type can identify stories that feel like political dramas, legal conflicts, social satires, mistaken-identity comedies, or power-system narratives.</p>
+
+        <div class="card-subsection">Works in This Type</div>
+        <ul class="works-list">
+          <li>Measure for Measure</li>
+          <li>Julius Caesar</li>
+          <li>Coriolanus</li>
+          <li>Twelfth Night</li>
+          <li>The Comedy of Errors</li>
+        </ul>
+        <p><strong>Target Viewers:</strong> Viewers who enjoy political drama, legal conflict, social satire, identity confusion, and stories about power structures.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── REFLECTION ── -->
+<section id="reflection">
+  <div class="container">
+    <p class="section-label">Section 4</p>
+    <h2>Reflection and Conclusion</h2>
+
+    <p>Our classification shows that Shakespeare's works cannot be fully explained by traditional genre categories such as comedy, tragedy, or romance. Even within the same genre, the plays often create very different emotional and relational experiences. Some comedies show a clear movement toward recovery and reconciliation, while others include darker patterns of contract, revenge, legal conflict, and social tension.</p>
+
+    <p>The main value of this project is that it focuses on <em>how the plays feel</em> and <em>how the characters are connected</em>. By using Voyant, we examined positive and negative keywords as evidence of emotional flow. By using DraCor, Gephi, and the Shakespeare Character Networks Explorer, we compared character relationships through network features such as density, communities, modularity, and central characters.</p>
+
+    <div class="highlight-box">
+      <p>We found that Shakespeare's plays create different narrative experiences through the combination of emotional patterns and relationship structures — a combination that traditional genre labels cannot fully capture.</p>
+    </div>
+
+    <p>This classification could also be applied to a wider streaming library. Instead of recommending films and series only by genre, a streaming service could group content by emotional flow and relationship structure — recovery arc stories, emotionally volatile stories, conflict spirals, or political and social network tensions. In this way, Shakespeare's works become reference points for a more flexible and viewer-centered recommendation system.</p>
+
+    <p>However, several limitations remain. Keyword frequency cannot capture every emotional nuance, and full-play network analysis does not fully show how relationships change scene by scene. For this reason, we combined tool-based results with plot, atmosphere, and character interpretation — treating data as supporting evidence rather than the only basis for classification.</p>
+
+    <p>Overall, our project suggests that emotional patterns and character networks can help organize stories in a way that better reflects how viewers actually experience them.</p>
+  </div>
+</section>
+
+<!-- ── REFERENCES ── -->
+<section id="references">
+  <div class="container">
+    <p class="section-label">Section 5</p>
+    <h2>References</h2>
+    <ul class="references-list">
+      <li>
+        Sinclair, S., &amp; Rockwell, G. <em>Voyant Tools.</em><br />
+        <a href="https://voyant-tools.org/" target="_blank" rel="noopener">https://voyant-tools.org/</a><br />
+        Used for text analysis, keyword frequency, vocabulary density, readability, and emotional keyword patterns.
+      </li>
+      <li>
+        DraCor. <em>Shakespeare Drama Corpus / ShakeDraCor.</em><br />
+        <a href="https://dracor.org/shake" target="_blank" rel="noopener">https://dracor.org/shake</a><br />
+        Used for character network data and network metrics such as network size, density, average path length, clustering, average degree, and maximum degree.
+      </li>
+      <li>
+        DraCor GitHub. <em>ShakeDraCor: Shakespeare Drama Corpus.</em><br />
+        <a href="https://github.com/dracor-org/shakedracor" target="_blank" rel="noopener">https://github.com/dracor-org/shakedracor</a><br />
+        Used as a reference for the Shakespeare corpus included in DraCor.
+      </li>
+      <li>
+        Gephi. <em>Gephi: The Open Graph Viz Platform.</em><br />
+        <a href="https://gephi.org/" target="_blank" rel="noopener">https://gephi.org/</a><br />
+        Used for visualizing and exploring character relationship networks.
+      </li>
+      <li>
+        Gephi Lite.<br />
+        <a href="https://lite.gephi.org/" target="_blank" rel="noopener">https://lite.gephi.org/</a><br />
+        Used as a web-based tool for visual network analysis.
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p><strong>PBL Module 2 Report</strong> &nbsp;·&nbsp; Shakespeare Emotional Flow and Character Network Classification</p>
+  <p style="margin-top:.5rem">김세형 &nbsp;·&nbsp; 이승빈 &nbsp;·&nbsp; 이채린 &nbsp;·&nbsp; 오신영</p>
+</footer>
+
+</body>
+</html>
